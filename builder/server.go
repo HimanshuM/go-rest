@@ -156,7 +156,7 @@ func (rg *routeGroup) getServerMethod(methodDef *RouteDef, url string) *MethodCo
 }
 
 func (rg *routeGroup) getRequestProto(methodDef *RouteDef, alias string) string {
-	params := make([]string, 0)
+	params := []string{"g *gin.Context"}
 	if methodDef.Param != "" {
 		params = append(params, fmt.Sprintf("%s string", methodDef.Param))
 	}
@@ -208,9 +208,10 @@ func (rg *routeGroup) parseRequestObject(def *R) *RequestContent {
 		return nil
 	}
 	return &RequestContent{
-		Name:  def.RequestParam.Name,
-		Type:  def.RequestParam.Type,
-		Alias: addPackageToMap(def.RequestParam.Path, rg.packagesMap, 0),
+		Name:            def.RequestParam.Name,
+		Type:            def.RequestParam.Type,
+		Alias:           addPackageToMap(def.RequestParam.Path, rg.packagesMap, 0),
+		TypeDeclaration: def.RequestParam.getTypeDeclaration(),
 	}
 }
 
@@ -227,7 +228,7 @@ func (rg *routeGroup) parseResponseObject(def *R) *RequestContent {
 }
 
 func (rg *routeGroup) getRequestParams(methodDef *RouteDef) string {
-	params := make([]string, 0)
+	params := []string{"g"}
 	if methodDef.Param != "" {
 		params = append(params, methodDef.Param)
 	}

@@ -4,9 +4,8 @@ func {{ .Handler }}(g *gin.Context) {
     {{ .Param }} := g.Param("{{ .Param }}")
 {{ end -}}
 {{- if .Request }}
-    {{ .Request.Name }} := &{{ .Request.Alias }}.{{ .Request.Type }}{}
-    err = g.ShouldBindJSON({{ .Request.Name }})
-    if err != nil {
+    {{ .Request.Name }} := {{ .Request.TypeDeclaration }}{}
+    if err = g.ShouldBindJSON({{ .Request.Name }}); err != nil {
     }
 {{- end -}}
 {{- if .Response }}

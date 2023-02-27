@@ -18,7 +18,7 @@ func definitions() {
 	schoolID, _ := schools.Path("/{id}")
 	schoolID.GET(&builder.R{}).PATCH(&builder.R{}).DELETE(&builder.R{})
 	stds, _ := apiV1.Path("/standards")
-	stds.GET(&builder.R{Response: []*models.StandardResponse{}}).POST(&builder.R{Request: &models.StandardRequest{}, Response: &models.StandardResponse{}})
+	stds.GET(&builder.R{Response: []*models.StandardResponse{}}).POST(&builder.R{Request: []*models.StandardRequest{}, Response: []*models.StandardResponse{}})
 	stdID, _ := stds.Path("/{id}")
 	stdID.GET(&builder.R{}).PATCH(&builder.R{}).DELETE(&builder.R{})
 	sections, _ := apiV1.Path("/sections")
