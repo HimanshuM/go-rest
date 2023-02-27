@@ -17,6 +17,6 @@ func {{ .Handler }}(g *gin.Context) {
 {{- if .Response }}
     g.JSON(200, &{{ .Response.Name }})
 {{ else }}
-    g.JSON(200, g.H{"status": "Ok"})
+    g.JSON(200, gin.H{"status": "Ok"})
 {{ end -}}
 }

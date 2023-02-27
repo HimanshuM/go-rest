@@ -1,7 +1,7 @@
 package {{ .Package }}
 
 {{ .Imports }}
-func Setup{{ .Level }}Routes(server *gin.Engine) {
+func Setup{{ .Level }}Routes(server *gin.RouterGroup) {
 {{- if .Server }}
     {{ .Server }} := server.Group("{{ .Route }}")
 {{- end -}}

@@ -8,7 +8,9 @@ import (
 	"text/template"
 )
 
-var packagesMap = make(map[string]string)
+type routeGroup struct {
+	packagesMap map[string]string
+}
 
 type ServerContent struct {
 	Package            string
@@ -44,36 +46,39 @@ type HandlerDefContent struct {
 }
 
 func writeServerFile(path, level, pkg, pkgPath string, leaf *AST) error {
+	rg := &routeGroup{
+		packagesMap: map[string]string{},
+	}
 	path += level + "_server.go"
 	hnd, err := os.Create(path)
 	if err != nil {
 		return err
 	}
 	defer hnd.Close()
-	return writeServerContent(hnd, level, pkg, pkgPath, leaf)
+	return rg.writeServerContent(hnd, level, pkg, pkgPath, leaf)
 }
 
-func writeServerContent(hnd *os.File, level, pkg, pkgPath string, leaf *AST) error {
+func (rg *routeGroup) writeServerContent(hnd *os.File, level, pkg, pkgPath string, leaf *AST) error {
 	tpl, err := template.ParseFiles("tpl/routes.tpl")
 	if err != nil {
 		return err
 	}
 	levelServer := Title(level) + "Server"
 	levelServerHandler := level + "ServerHandler"
-	content, err := buildServerContent(leaf, pkg, levelServer, levelServerHandler)
+	content, err := rg.buildServerContent(leaf, pkg, levelServer, levelServerHandler)
 	if err != nil {
 		return err
 	}
 	return tpl.Execute(hnd, content)
 }
 
-func buildServerContent(leaf *AST, pkg, levelServer, levelServerHandler string) (*ServerContent, error) {
+func (rg *routeGroup) buildServerContent(leaf *AST, pkg, levelServer, levelServerHandler string) (*ServerContent, error) {
 	importsArr := []string{"github.com/gin-gonic/gin"}
-	methods, functions, err := buildServerMethods(leaf, levelServer, levelServerHandler)
+	methods, functions, err := rg.buildServerMethods(leaf, levelServer, levelServerHandler)
 	if err != nil {
 		return nil, err
 	}
-	for alias, pkg := range packagesMap {
+	for alias, pkg := range rg.packagesMap {
 		pkgName := getLastComponent(pkg)
 		if pkgName == alias {
 			importsArr = append(importsArr, pkg)
@@ -96,16 +101,16 @@ func buildServerContent(leaf *AST, pkg, levelServer, levelServerHandler string) 
 	return cnt, nil
 }
 
-func buildServerMethods(leaf *AST, levelServer, levelServerHandler string) (methods, functions []string, err error) {
+func (rg *routeGroup) buildServerMethods(leaf *AST, levelServer, levelServerHandler string) (methods, functions []string, err error) {
 	i := 0
 	methods = make([]string, len(leaf.Node.Methods))
 	functions = make([]string, len(leaf.Node.Methods))
 	for _, method := range leaf.Node.Methods {
-		methods[i], err = buildServerMethod(method, leaf.Node.URL)
+		methods[i], err = rg.buildServerMethod(method, leaf.Node.URL)
 		if err != nil {
 			return nil, nil, err
 		}
-		functions[i], err = buildServerFunction(method, leaf.Node.URL, levelServer, levelServerHandler)
+		functions[i], err = rg.buildServerFunction(method, leaf.Node.URL, levelServer, levelServerHandler)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -114,35 +119,35 @@ func buildServerMethods(leaf *AST, levelServer, levelServerHandler string) (meth
 	return
 }
 
-func buildServerMethod(methodDef *RouteDef, url string) (string, error) {
+func (rg *routeGroup) buildServerMethod(methodDef *RouteDef, url string) (string, error) {
 	tpl, err := template.ParseFiles("tpl/method.tpl")
 	if err != nil {
 		return "", err
 	}
 	var content bytes.Buffer
-	if err = tpl.Execute(&content, getServerMethod(methodDef, url)); err != nil {
+	if err = tpl.Execute(&content, rg.getServerMethod(methodDef, url)); err != nil {
 		return "", err
 	}
 	return content.String(), nil
 }
 
-func getServerMethod(methodDef *RouteDef, url string) *MethodContent {
+func (rg *routeGroup) getServerMethod(methodDef *RouteDef, url string) *MethodContent {
 	requestAlias, responseAlias := "", ""
 	if methodDef.Definition.requestTypePath != "" {
-		requestAlias = addPackageToMap(methodDef.Definition.requestTypePath, packagesMap, 0)
+		requestAlias = addPackageToMap(methodDef.Definition.requestTypePath, rg.packagesMap, 0)
 	}
 	if methodDef.Definition.responseTypePath != "" {
-		responseAlias = addPackageToMap(methodDef.Definition.responseTypePath, packagesMap, 0)
+		responseAlias = addPackageToMap(methodDef.Definition.responseTypePath, rg.packagesMap, 0)
 	}
 	ctn := &MethodContent{
 		Method:     methodDef.Handler,
-		Params:     getRequestProto(methodDef, requestAlias),
-		ReturnType: getReturnType(methodDef, responseAlias),
+		Params:     rg.getRequestProto(methodDef, requestAlias),
+		ReturnType: rg.getReturnType(methodDef, responseAlias),
 	}
 	return ctn
 }
 
-func getRequestProto(methodDef *RouteDef, alias string) string {
+func (rg *routeGroup) getRequestProto(methodDef *RouteDef, alias string) string {
 	params := make([]string, 0)
 	if methodDef.Param != "" {
 		params = append(params, fmt.Sprintf("%s string", methodDef.Param))
@@ -153,7 +158,7 @@ func getRequestProto(methodDef *RouteDef, alias string) string {
 	return strings.Join(params, ", ")
 }
 
-func getReturnType(methodDef *RouteDef, alias string) string {
+func (rg *routeGroup) getReturnType(methodDef *RouteDef, alias string) string {
 	pre, post := "", ""
 	params := make([]string, 0)
 	if methodDef.Definition.Response != nil {
@@ -164,32 +169,32 @@ func getReturnType(methodDef *RouteDef, alias string) string {
 	return fmt.Sprintf("%s%s%s", pre, strings.Join(params, ", "), post)
 }
 
-func buildServerFunction(methodDef *RouteDef, url, levelServer, levelServerHandler string) (string, error) {
+func (rg *routeGroup) buildServerFunction(methodDef *RouteDef, url, levelServer, levelServerHandler string) (string, error) {
 	tpl, err := template.ParseFiles("tpl/route.tpl")
 	if err != nil {
 		return "", err
 	}
 	var content bytes.Buffer
-	if err = tpl.Execute(&content, getServerFunction(methodDef, url, levelServer, levelServerHandler)); err != nil {
+	if err = tpl.Execute(&content, rg.getServerFunction(methodDef, url, levelServer, levelServerHandler)); err != nil {
 		return "", err
 	}
 	return content.String(), nil
 }
 
-func getServerFunction(methodDef *RouteDef, url, levelServer, levelServerHandler string) *HandlerDefContent {
+func (rg *routeGroup) getServerFunction(methodDef *RouteDef, url, levelServer, levelServerHandler string) *HandlerDefContent {
 	return &HandlerDefContent{
 		Handler:            methodDef.Handler,
 		Param:              methodDef.Param,
-		Request:            parseObjectType(methodDef.Definition, true),
+		Request:            rg.parseObjectType(methodDef.Definition, true),
 		LevelServerHandler: levelServerHandler,
 		Method:             methodDef.Handler,
-		Returns:            getResponseParams(methodDef.Definition),
-		Params:             getRequestParams(methodDef),
-		Response:           parseObjectType(methodDef.Definition, false),
+		Returns:            rg.getResponseParams(methodDef.Definition),
+		Params:             rg.getRequestParams(methodDef),
+		Response:           rg.parseObjectType(methodDef.Definition, false),
 	}
 }
 
-func parseObjectType(def *R, request bool) *RequestContent {
+func (rg *routeGroup) parseObjectType(def *R, request bool) *RequestContent {
 	if request {
 		if def.Request == nil {
 			return nil
@@ -197,7 +202,7 @@ func parseObjectType(def *R, request bool) *RequestContent {
 		return &RequestContent{
 			Name:  def.requestName,
 			Type:  def.requestType,
-			Alias: addPackageToMap(def.requestTypePath, packagesMap, 0),
+			Alias: addPackageToMap(def.requestTypePath, rg.packagesMap, 0),
 		}
 	} else {
 		if def.Response == nil {
@@ -206,12 +211,12 @@ func parseObjectType(def *R, request bool) *RequestContent {
 		return &RequestContent{
 			Name:  def.responseName,
 			Type:  def.responseType,
-			Alias: addPackageToMap(def.responseTypePath, packagesMap, 0),
+			Alias: addPackageToMap(def.responseTypePath, rg.packagesMap, 0),
 		}
 	}
 }
 
-func getRequestParams(methodDef *RouteDef) string {
+func (rg *routeGroup) getRequestParams(methodDef *RouteDef) string {
 	params := make([]string, 0)
 	if methodDef.Param != "" {
 		params = append(params, methodDef.Param)
@@ -222,7 +227,7 @@ func getRequestParams(methodDef *RouteDef) string {
 	return strings.Join(params, ", ")
 }
 
-func getResponseParams(def *R) string {
+func (rg *routeGroup) getResponseParams(def *R) string {
 	params := make([]string, 0)
 	if def.Response != nil {
 		params = append(params, def.responseName)
