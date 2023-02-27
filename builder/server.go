@@ -9,7 +9,13 @@ import (
 )
 
 type routeGroup struct {
-	packagesMap map[string]string
+	packagesMap        map[string]importDef
+	level              string
+	levelServer        string
+	levelServerHandler string
+	pkg                string
+	packagePath        string
+	leaf               *AST
 }
 
 type ServerContent struct {
@@ -47,70 +53,70 @@ type HandlerDefContent struct {
 
 func writeServerFile(path, level, pkg, pkgPath string, leaf *AST) error {
 	rg := &routeGroup{
-		packagesMap: map[string]string{},
+		packagesMap: map[string]importDef{},
+		level:       level,
+		pkg:         pkg,
+		packagePath: pkgPath,
+		leaf:        leaf,
 	}
+	addPackageToMap("github.com/gin-gonic/gin", rg.packagesMap, 0)
 	path += level + "_server.go"
 	hnd, err := os.Create(path)
 	if err != nil {
 		return err
 	}
 	defer hnd.Close()
-	return rg.writeServerContent(hnd, level, pkg, pkgPath, leaf)
+	return rg.writeServerContent(hnd)
 }
 
-func (rg *routeGroup) writeServerContent(hnd *os.File, level, pkg, pkgPath string, leaf *AST) error {
+func (rg *routeGroup) writeServerContent(hnd *os.File) error {
 	tpl, err := template.ParseFiles("tpl/routes.tpl")
 	if err != nil {
 		return err
 	}
-	levelServer := Title(level) + "Server"
-	levelServerHandler := level + "ServerHandler"
-	content, err := rg.buildServerContent(leaf, pkg, levelServer, levelServerHandler)
+	rg.levelServer = Title(rg.level) + "Server"
+	rg.levelServerHandler = rg.level + "ServerHandler"
+	content, err := rg.buildServerContent()
 	if err != nil {
 		return err
 	}
 	return tpl.Execute(hnd, content)
 }
 
-func (rg *routeGroup) buildServerContent(leaf *AST, pkg, levelServer, levelServerHandler string) (*ServerContent, error) {
-	importsArr := []string{"github.com/gin-gonic/gin"}
-	methods, functions, err := rg.buildServerMethods(leaf, levelServer, levelServerHandler)
+func (rg *routeGroup) buildServerContent() (*ServerContent, error) {
+	importsArr := []importDef{}
+	methods, functions, err := rg.buildServerMethods()
 	if err != nil {
 		return nil, err
 	}
-	for alias, pkg := range rg.packagesMap {
-		pkgName := getLastComponent(pkg)
-		if pkgName == alias {
-			importsArr = append(importsArr, pkg)
-		} else {
-			importsArr = append(importsArr, fmt.Sprintf("%s %s", alias, pkg))
-		}
+	for _, pkg := range rg.packagesMap {
+		importsArr = append(importsArr, pkg)
 	}
 	imports, err := imports(importsArr...)
 	if err != nil {
 		return nil, err
 	}
 	cnt := &ServerContent{
-		Package:            pkg,
+		Package:            rg.pkg,
 		Imports:            imports,
-		LevelServer:        levelServer,
-		LevelServerHandler: levelServerHandler,
+		LevelServer:        rg.levelServer,
+		LevelServerHandler: rg.levelServerHandler,
 		Methods:            methods,
 		Functions:          functions,
 	}
 	return cnt, nil
 }
 
-func (rg *routeGroup) buildServerMethods(leaf *AST, levelServer, levelServerHandler string) (methods, functions []string, err error) {
+func (rg *routeGroup) buildServerMethods() (methods, functions []string, err error) {
 	i := 0
-	methods = make([]string, len(leaf.Node.Methods))
-	functions = make([]string, len(leaf.Node.Methods))
-	for _, method := range leaf.Node.Methods {
-		methods[i], err = rg.buildServerMethod(method, leaf.Node.URL)
+	methods = make([]string, len(rg.leaf.Node.Methods))
+	functions = make([]string, len(rg.leaf.Node.Methods))
+	for _, method := range rg.leaf.Node.Methods {
+		methods[i], err = rg.buildServerMethod(method, rg.leaf.Node.URL)
 		if err != nil {
 			return nil, nil, err
 		}
-		functions[i], err = rg.buildServerFunction(method, leaf.Node.URL, levelServer, levelServerHandler)
+		functions[i], err = rg.buildServerFunction(method, rg.leaf.Node.URL)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -169,24 +175,24 @@ func (rg *routeGroup) getReturnType(methodDef *RouteDef, alias string) string {
 	return fmt.Sprintf("%s%s%s", pre, strings.Join(params, ", "), post)
 }
 
-func (rg *routeGroup) buildServerFunction(methodDef *RouteDef, url, levelServer, levelServerHandler string) (string, error) {
+func (rg *routeGroup) buildServerFunction(methodDef *RouteDef, url string) (string, error) {
 	tpl, err := template.ParseFiles("tpl/route.tpl")
 	if err != nil {
 		return "", err
 	}
 	var content bytes.Buffer
-	if err = tpl.Execute(&content, rg.getServerFunction(methodDef, url, levelServer, levelServerHandler)); err != nil {
+	if err = tpl.Execute(&content, rg.getServerFunction(methodDef, url)); err != nil {
 		return "", err
 	}
 	return content.String(), nil
 }
 
-func (rg *routeGroup) getServerFunction(methodDef *RouteDef, url, levelServer, levelServerHandler string) *HandlerDefContent {
+func (rg *routeGroup) getServerFunction(methodDef *RouteDef, url string) *HandlerDefContent {
 	return &HandlerDefContent{
 		Handler:            methodDef.Handler,
 		Param:              methodDef.Param,
 		Request:            rg.parseObjectType(methodDef.Definition, true),
-		LevelServerHandler: levelServerHandler,
+		LevelServerHandler: rg.levelServerHandler,
 		Method:             methodDef.Handler,
 		Returns:            rg.getResponseParams(methodDef.Definition),
 		Params:             rg.getRequestParams(methodDef),

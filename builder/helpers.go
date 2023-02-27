@@ -1,7 +1,6 @@
 package builder
 
 import (
-	"strconv"
 	"strings"
 
 	"golang.org/x/text/cases"
@@ -30,19 +29,4 @@ func Title(str string) string {
 func getLastComponent(str string) string {
 	components := strings.Split(str, "/")
 	return components[len(components)-1]
-}
-
-func addPackageToMap(pkg string, packages map[string]string, suffix int) string {
-	pkgName := getLastComponent(pkg)
-	if suffix > 0 {
-		pkgName += strconv.Itoa(suffix)
-	}
-	if existingPkg, present := packages[pkgName]; present {
-		if existingPkg != pkg {
-			return addPackageToMap(pkg, packages, suffix+1)
-		}
-	} else {
-		packages[pkgName] = pkg
-	}
-	return pkgName
 }
