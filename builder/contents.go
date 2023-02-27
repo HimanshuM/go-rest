@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"strings"
 	"text/template"
 )
 
@@ -57,7 +56,7 @@ func buildRoutesContent(level, pkg, pkgPath string, leaf *AST) (*RoutesContent, 
 		Imports: imports,
 		Server:  server,
 		Route:   leaf.Level,
-		Level:   strings.Title(level),
+		Level:   Title(level),
 	}
 	ctn.linesFromRoute(leaf, level, ctn.Server)
 	return ctn, nil
@@ -67,7 +66,7 @@ func (ctn *RoutesContent) linesFromRoute(leaf *AST, level, server string) {
 	i := 0
 	ctn.Lines = make([]string, len(leaf.Tree)+len(leaf.Node.Methods))
 	for _, node := range leaf.Tree {
-		ctn.Lines[i] = fmt.Sprintf("%s.Setup%sRoutes(%s)", level, strings.Title(cleanupRoute(node.Level)), server)
+		ctn.Lines[i] = fmt.Sprintf("%s.Setup%sRoutes(%s)", level, Title(cleanupRoute(node.Level)), server)
 		i++
 	}
 	for method, def := range leaf.Node.Methods {

@@ -1,6 +1,12 @@
 package builder
 
-import "strings"
+import (
+	"strconv"
+	"strings"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+)
 
 func cleanupRoute(route string) string {
 	route = strings.Trim(route, "/")
@@ -15,4 +21,28 @@ func getURLParam(url string) string {
 	}
 	closing := strings.Index(url, "}")
 	return url[opening+1 : closing]
+}
+
+func Title(str string) string {
+	return cases.Title(language.English).String(str)
+}
+
+func getLastComponent(str string) string {
+	components := strings.Split(str, "/")
+	return components[len(components)-1]
+}
+
+func addPackageToMap(pkg string, packages map[string]string, suffix int) string {
+	pkgName := getLastComponent(pkg)
+	if suffix > 0 {
+		pkgName += strconv.Itoa(suffix)
+	}
+	if existingPkg, present := packages[pkgName]; present {
+		if existingPkg != pkg {
+			return addPackageToMap(pkg, packages, suffix+1)
+		}
+	} else {
+		packages[pkgName] = pkg
+	}
+	return pkgName
 }

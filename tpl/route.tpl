@@ -4,13 +4,13 @@ func {{ .Handler }}(g *gin.Context) {
     {{ .Param }} := g.Param("{{ .Param }}")
 {{ end -}}
 {{- if .Request }}
-    {{ .Request.Name }} := &{{ .Request.Type }}{}
-    err = g.ShouldBindJSON(&{{ .Request.Name }})
+    {{ .Request.Name }} := &{{ .Request.Alias }}.{{ .Request.Type }}{}
+    err = g.ShouldBindJSON({{ .Request.Name }})
     if err != nil {
     }
 {{- end -}}
 {{- if .Response }}
-    var {{ .Response.Name }} *{{ .Response.Type }}
+    var {{ .Response.Name }} *{{ .Response.Alias }}.{{ .Response.Type }}
 {{ end }}
     if {{ .Returns }} = {{ .LevelServerHandler }}.{{ .Method }}({{ .Params }}); err != nil {
     }

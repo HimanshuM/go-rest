@@ -25,7 +25,7 @@ func (a *AST) append(route string) string {
 
 func (a *AST) GET(def *R) *AST {
 	method := "GET"
-	def.processRequest()
+	def.processDefinition()
 	a.Node.Methods[method] = &RouteDef{
 		Method:     method,
 		Handler:    a.getHandler(method),
@@ -38,7 +38,7 @@ func (a *AST) GET(def *R) *AST {
 
 func (a *AST) POST(def *R) *AST {
 	method := "POST"
-	def.processRequest()
+	def.processDefinition()
 	a.Node.Methods[method] = &RouteDef{
 		Method:     method,
 		Handler:    a.getHandler(method),
@@ -51,7 +51,7 @@ func (a *AST) POST(def *R) *AST {
 
 func (a *AST) PUT(def *R) *AST {
 	method := "PUT"
-	def.processRequest()
+	def.processDefinition()
 	a.Node.Methods[method] = &RouteDef{
 		Method:     method,
 		Handler:    a.getHandler(method),
@@ -64,7 +64,7 @@ func (a *AST) PUT(def *R) *AST {
 
 func (a *AST) PATCH(def *R) *AST {
 	method := "PATCH"
-	def.processRequest()
+	def.processDefinition()
 	a.Node.Methods[method] = &RouteDef{
 		Method:     method,
 		Handler:    a.getHandler(method),
@@ -77,7 +77,7 @@ func (a *AST) PATCH(def *R) *AST {
 
 func (a *AST) DELETE(def *R) *AST {
 	method := "DELETE"
-	def.processRequest()
+	def.processDefinition()
 	a.Node.Methods[method] = &RouteDef{
 		Method:     method,
 		Handler:    a.getHandler(method),
@@ -90,7 +90,7 @@ func (a *AST) DELETE(def *R) *AST {
 
 func (a *AST) OPTIONS(def *R) *AST {
 	method := "OPTIONS"
-	def.processRequest()
+	def.processDefinition()
 	a.Node.Methods[method] = &RouteDef{
 		Method:     method,
 		Handler:    a.getHandler(method),
@@ -105,7 +105,7 @@ func (a *AST) getHandler(method string) string {
 	name := ""
 	components := strings.Split(a.Node.URL, "/")
 	for _, c := range components {
-		name += strings.Title(cleanupRoute(c))
+		name += Title(cleanupRoute(c))
 	}
-	return fmt.Sprintf("%s%s", name, strings.Title(strings.ToLower(method)))
+	return fmt.Sprintf("%s%s", name, Title(strings.ToLower(method)))
 }

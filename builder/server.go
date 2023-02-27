@@ -8,6 +8,8 @@ import (
 	"text/template"
 )
 
+var packagesMap = make(map[string]string)
+
 type ServerContent struct {
 	Package            string
 	Imports            string
@@ -25,8 +27,9 @@ type MethodContent struct {
 }
 
 type RequestContent struct {
-	Name string
-	Type string
+	Name  string
+	Type  string
+	Alias string
 }
 
 type HandlerDefContent struct {
@@ -55,7 +58,7 @@ func writeServerContent(hnd *os.File, level, pkg, pkgPath string, leaf *AST) err
 	if err != nil {
 		return err
 	}
-	levelServer := strings.Title(level) + "Server"
+	levelServer := Title(level) + "Server"
 	levelServerHandler := level + "ServerHandler"
 	content, err := buildServerContent(leaf, pkg, levelServer, levelServerHandler)
 	if err != nil {
@@ -66,12 +69,17 @@ func writeServerContent(hnd *os.File, level, pkg, pkgPath string, leaf *AST) err
 
 func buildServerContent(leaf *AST, pkg, levelServer, levelServerHandler string) (*ServerContent, error) {
 	importsArr := []string{"github.com/gin-gonic/gin"}
-	packages, methods, functions, err := buildServerMethods(leaf, levelServer, levelServerHandler)
+	methods, functions, err := buildServerMethods(leaf, levelServer, levelServerHandler)
 	if err != nil {
 		return nil, err
 	}
-	for _, pkg := range packages {
-		importsArr = append(importsArr, pkg)
+	for alias, pkg := range packagesMap {
+		pkgName := getLastComponent(pkg)
+		if pkgName == alias {
+			importsArr = append(importsArr, pkg)
+		} else {
+			importsArr = append(importsArr, fmt.Sprintf("%s %s", alias, pkg))
+		}
 	}
 	imports, err := imports(importsArr...)
 	if err != nil {
@@ -88,18 +96,18 @@ func buildServerContent(leaf *AST, pkg, levelServer, levelServerHandler string) 
 	return cnt, nil
 }
 
-func buildServerMethods(leaf *AST, levelServer, levelServerHandler string) (pkgs, methods, functions []string, err error) {
+func buildServerMethods(leaf *AST, levelServer, levelServerHandler string) (methods, functions []string, err error) {
 	i := 0
 	methods = make([]string, len(leaf.Node.Methods))
 	functions = make([]string, len(leaf.Node.Methods))
 	for _, method := range leaf.Node.Methods {
 		methods[i], err = buildServerMethod(method, leaf.Node.URL)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, err
 		}
 		functions[i], err = buildServerFunction(method, leaf.Node.URL, levelServer, levelServerHandler)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, err
 		}
 		i++
 	}
@@ -119,32 +127,38 @@ func buildServerMethod(methodDef *RouteDef, url string) (string, error) {
 }
 
 func getServerMethod(methodDef *RouteDef, url string) *MethodContent {
-	return &MethodContent{
-		Method:     methodDef.Handler,
-		Params:     getRequestProto(methodDef),
-		ReturnType: getReturnType(methodDef),
+	requestAlias, responseAlias := "", ""
+	if methodDef.Definition.requestTypePath != "" {
+		requestAlias = addPackageToMap(methodDef.Definition.requestTypePath, packagesMap, 0)
 	}
+	if methodDef.Definition.responseTypePath != "" {
+		responseAlias = addPackageToMap(methodDef.Definition.responseTypePath, packagesMap, 0)
+	}
+	ctn := &MethodContent{
+		Method:     methodDef.Handler,
+		Params:     getRequestProto(methodDef, requestAlias),
+		ReturnType: getReturnType(methodDef, responseAlias),
+	}
+	return ctn
 }
 
-func getRequestProto(methodDef *RouteDef) string {
+func getRequestProto(methodDef *RouteDef, alias string) string {
 	params := make([]string, 0)
 	if methodDef.Param != "" {
 		params = append(params, fmt.Sprintf("%s string", methodDef.Param))
 	}
 	if methodDef.Definition.Request != nil {
-		methodDef.Definition.processRequest()
-		params = append(params, fmt.Sprintf("%s *%s", methodDef.Definition.requestName, methodDef.Definition.requestType))
+		params = append(params, fmt.Sprintf("%s *%s.%s", methodDef.Definition.requestName, alias, methodDef.Definition.requestType))
 	}
 	return strings.Join(params, ", ")
 }
 
-func getReturnType(methodDef *RouteDef) string {
+func getReturnType(methodDef *RouteDef, alias string) string {
 	pre, post := "", ""
 	params := make([]string, 0)
 	if methodDef.Definition.Response != nil {
 		pre, post = "(", ")"
-		methodDef.Definition.processRequest()
-		params = append(params, fmt.Sprintf("*%s", methodDef.Definition.responseType))
+		params = append(params, fmt.Sprintf("*%s.%s", alias, methodDef.Definition.responseType))
 	}
 	params = append(params, "error")
 	return fmt.Sprintf("%s%s%s", pre, strings.Join(params, ", "), post)
@@ -181,16 +195,18 @@ func parseObjectType(def *R, request bool) *RequestContent {
 			return nil
 		}
 		return &RequestContent{
-			Name: def.requestName,
-			Type: def.requestType,
+			Name:  def.requestName,
+			Type:  def.requestType,
+			Alias: addPackageToMap(def.requestTypePath, packagesMap, 0),
 		}
 	} else {
 		if def.Response == nil {
 			return nil
 		}
 		return &RequestContent{
-			Name: def.responseName,
-			Type: def.responseType,
+			Name:  def.responseName,
+			Type:  def.responseType,
+			Alias: addPackageToMap(def.responseTypePath, packagesMap, 0),
 		}
 	}
 }
@@ -209,7 +225,6 @@ func getRequestParams(methodDef *RouteDef) string {
 func getResponseParams(def *R) string {
 	params := make([]string, 0)
 	if def.Response != nil {
-		def.processRequest()
 		params = append(params, def.responseName)
 	}
 	params = append(params, "err")
