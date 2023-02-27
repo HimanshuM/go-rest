@@ -40,12 +40,3 @@ type AST struct {
 	HasDefinition bool
 	Package       string
 }
-
-func (r *R) processDefinition() {
-	if r.Request != nil {
-		r.processRequest()
-	}
-	if r.Response != nil {
-		r.processResponse()
-	}
-}

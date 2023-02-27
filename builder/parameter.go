@@ -6,18 +6,40 @@ import (
 	"strings"
 )
 
+func (r *R) processDefinition() {
+	if r.Request != nil {
+		r.processRequest()
+	}
+	if r.Response != nil {
+		r.processResponse()
+	}
+	if r.Error != nil {
+		r.processError()
+	}
+}
+
 func (r *R) processRequest() {
 	request := reflect.TypeOf(r.Request)
-	r.RequestParam = processType(request)
+	r.RequestParam = processType(request, false)
 }
 
 func (r *R) processResponse() {
 	response := reflect.TypeOf(r.Response)
-	r.ResponseParam = processType(response)
+	r.ResponseParam = processType(response, false)
 }
 
-func processType(typeObj reflect.Type) *Parameter {
+func (r *R) processError() {
+	errType := reflect.TypeOf(r.Error)
+	if r.ErrorParam = processType(errType, true); r.ErrorParam == nil {
+		panic("Error: error parameter cannot be an array")
+	}
+}
+
+func processType(typeObj reflect.Type, noArray bool) *Parameter {
 	typeObj, isArray := getType(typeObj)
+	if noArray && isArray {
+		return nil
+	}
 	typeName := typeObj.Name()
 	pkgPath := typeObj.PkgPath()
 	return &Parameter{
