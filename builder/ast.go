@@ -50,23 +50,3 @@ func getPath(url string, root *AST) (*AST, error) {
 	}
 	return leaf, nil
 }
-
-func addRoute(route *Route) error {
-	leaf, err := getPath(route.FullURL, root)
-	if err != nil {
-		return err
-	}
-	leaf.Node = route
-	leaf.HasDefinition = len(leaf.Node.Methods) > 0
-	return nil
-}
-
-func BuildAST() (ast *AST, err error) {
-	ast = root
-	for _, route := range allRoutes {
-		if err = addRoute(route); err != nil {
-			return
-		}
-	}
-	return
-}

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/HimanshuM/go-rest-builder/builder"
+	"github.com/HimanshuM/go-rest-builder/models"
 )
 
 func definitions() {
@@ -17,7 +18,7 @@ func definitions() {
 	schoolID, _ := schools.Path("/{id}")
 	schoolID.GET(&builder.R{}).PATCH(&builder.R{}).DELETE(&builder.R{})
 	stds, _ := apiV1.Path("/standards")
-	stds.GET(&builder.R{}).POST(&builder.R{})
+	stds.GET(&builder.R{Response: &models.StandardResponse{}}).POST(&builder.R{Request: &models.StandardRequest{}, Response: &models.StandardResponse{}})
 	stdID, _ := stds.Path("/{id}")
 	stdID.GET(&builder.R{}).PATCH(&builder.R{}).DELETE(&builder.R{})
 	sections, _ := apiV1.Path("/sections")
@@ -26,19 +27,6 @@ func definitions() {
 	secID.GET(&builder.R{}).PATCH(&builder.R{}).DELETE(&builder.R{})
 	v2Admin, _ := apiV2.Path("/admin")
 	v2Admin.GET(&builder.R{})
-}
-
-func printOne(route *builder.Route) {
-	fmt.Printf("URL: %s\n", route.URL)
-	for method, def := range route.Methods {
-		fmt.Printf("\t%s: Handler: %s\n", method, def.Handler)
-	}
-}
-
-func printAll() {
-	for _, route := range builder.AllRoutes() {
-		printOne(route)
-	}
 }
 
 func stringifyHandlers(node *builder.Route) string {
@@ -72,14 +60,8 @@ func printLeaf(leaf *builder.AST, indent int) {
 
 func main() {
 	definitions()
-	if root, err := builder.BuildAST(); err != nil {
+	if err := builder.BuildPaths(); err != nil {
 		fmt.Printf("ERROR: %s", err.Error())
 		return
-	} else {
-		printLeaf(root, 0)
-		if err := builder.BuildPaths(root); err != nil {
-			fmt.Printf("ERROR: %s", err.Error())
-			return
-		}
 	}
 }

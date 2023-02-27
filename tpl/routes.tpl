@@ -1,5 +1,17 @@
-package {{ .PackageName }}
+package {{ .Package }}
 
 {{ .Imports }}
+type {{ .LevelServer }} interface {
+{{- range $def := .Methods }}
+    {{ $def }}
+{{- end }}
+}
 
-func
+var {{ .LevelServerHandler }} {{ .LevelServer }}
+
+func Use{{ .LevelServer }}Handler(handler *{{ .LevelServer }}) {
+    {{ .LevelServerHandler }} = *handler
+}
+{{ range $fn := .Functions }}
+{{ $fn }}
+{{- end -}}

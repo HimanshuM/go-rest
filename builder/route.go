@@ -25,61 +25,79 @@ func (a *AST) append(route string) string {
 
 func (a *AST) GET(def *R) *AST {
 	method := "GET"
+	def.processRequest()
 	a.Node.Methods[method] = &RouteDef{
 		Method:     method,
 		Handler:    a.getHandler(method),
 		Definition: def,
+		Param:      getURLParam(a.Node.URL),
 	}
+	a.HasDefinition = true
 	return a
 }
 
 func (a *AST) POST(def *R) *AST {
 	method := "POST"
+	def.processRequest()
 	a.Node.Methods[method] = &RouteDef{
 		Method:     method,
 		Handler:    a.getHandler(method),
 		Definition: def,
+		Param:      getURLParam(a.Node.URL),
 	}
+	a.HasDefinition = true
 	return a
 }
 
 func (a *AST) PUT(def *R) *AST {
 	method := "PUT"
+	def.processRequest()
 	a.Node.Methods[method] = &RouteDef{
 		Method:     method,
 		Handler:    a.getHandler(method),
 		Definition: def,
+		Param:      getURLParam(a.Node.URL),
 	}
+	a.HasDefinition = true
 	return a
 }
 
 func (a *AST) PATCH(def *R) *AST {
 	method := "PATCH"
+	def.processRequest()
 	a.Node.Methods[method] = &RouteDef{
 		Method:     method,
 		Handler:    a.getHandler(method),
 		Definition: def,
+		Param:      getURLParam(a.Node.URL),
 	}
+	a.HasDefinition = true
 	return a
 }
 
 func (a *AST) DELETE(def *R) *AST {
 	method := "DELETE"
+	def.processRequest()
 	a.Node.Methods[method] = &RouteDef{
 		Method:     method,
 		Handler:    a.getHandler(method),
 		Definition: def,
+		Param:      getURLParam(a.Node.URL),
 	}
+	a.HasDefinition = true
 	return a
 }
 
 func (a *AST) OPTIONS(def *R) *AST {
 	method := "OPTIONS"
+	def.processRequest()
 	a.Node.Methods[method] = &RouteDef{
 		Method:     method,
 		Handler:    a.getHandler(method),
 		Definition: def,
+		Param:      getURLParam(a.Node.URL),
 	}
+	a.HasDefinition = true
 	return a
 }
 
@@ -87,9 +105,7 @@ func (a *AST) getHandler(method string) string {
 	name := ""
 	components := strings.Split(a.Node.URL, "/")
 	for _, c := range components {
-		c = strings.Replace(c, "{", "", -1)
-		c = strings.Replace(c, "}", "", -1)
-		name += strings.Title(c)
+		name += strings.Title(cleanupRoute(c))
 	}
 	return fmt.Sprintf("%s%s", name, strings.Title(strings.ToLower(method)))
 }

@@ -11,6 +11,8 @@ import (
 type RoutesContent struct {
 	Package string
 	Imports string
+	Server  string
+	Route   string
 	Lines   []string
 	Level   string
 }
@@ -21,13 +23,8 @@ func writeRoutesFile(path, level, pkg, pkgPath string, leaf *AST) error {
 	if err != nil {
 		return err
 	}
-	if err = writeRoutesContent(hnd, level, pkg, pkgPath, leaf); err != nil {
-		return err
-	}
-	if err = hnd.Close(); err != nil {
-		return err
-	}
-	return nil
+	defer hnd.Close()
+	return writeRoutesContent(hnd, level, pkg, pkgPath, leaf)
 }
 
 func writeRoutesContent(hnd *os.File, level, pkg, pkgPath string, leaf *AST) error {
@@ -51,20 +48,26 @@ func buildRoutesContent(level, pkg, pkgPath string, leaf *AST) (*RoutesContent, 
 	if err != nil {
 		return nil, err
 	}
+	server := ""
+	if len(leaf.Tree) > 0 {
+		server = level + "Router"
+	}
 	ctn := &RoutesContent{
 		Package: pkg,
 		Imports: imports,
+		Server:  server,
+		Route:   leaf.Level,
 		Level:   strings.Title(level),
 	}
-	ctn.linesFromRoute(leaf, level)
+	ctn.linesFromRoute(leaf, level, ctn.Server)
 	return ctn, nil
 }
 
-func (ctn *RoutesContent) linesFromRoute(leaf *AST, level string) {
+func (ctn *RoutesContent) linesFromRoute(leaf *AST, level, server string) {
 	i := 0
 	ctn.Lines = make([]string, len(leaf.Tree)+len(leaf.Node.Methods))
 	for _, node := range leaf.Tree {
-		ctn.Lines[i] = fmt.Sprintf("%s.Setup%sRoutes(server)", level, strings.Title(cleanupRoute(node.Level)))
+		ctn.Lines[i] = fmt.Sprintf("%s.Setup%sRoutes(%s)", level, strings.Title(cleanupRoute(node.Level)), server)
 		i++
 	}
 	for method, def := range leaf.Node.Methods {

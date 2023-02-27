@@ -13,6 +13,11 @@ func buildLevel(leaf *AST, pkg, dir, pkgPath string) (err error) {
 			return
 		}
 	}
+	if leaf.HasDefinition {
+		if err = writeServerFile(dir, level, pkg, pkgPath, leaf); err != nil {
+			return
+		}
+	}
 	dir += level
 	if len(leaf.Tree) > 0 {
 		err = os.Mkdir(dir, 0755)
@@ -36,7 +41,7 @@ func buildLevel(leaf *AST, pkg, dir, pkgPath string) (err error) {
 	return
 }
 
-func BuildPaths(root *AST) error {
+func BuildPaths() error {
 	pkgComponents := strings.Split(pkgPath, "/")
 	rootPackage := pkgComponents[len(pkgComponents)-1]
 	return buildLevel(root, rootPackage, rootPackage, pkgPath)
