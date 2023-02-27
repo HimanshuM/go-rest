@@ -139,11 +139,11 @@ func (rg *routeGroup) buildServerMethod(methodDef *RouteDef, url string) (string
 
 func (rg *routeGroup) getServerMethod(methodDef *RouteDef, url string) *MethodContent {
 	requestAlias, responseAlias := "", ""
-	if methodDef.Definition.requestTypePath != "" {
-		requestAlias = addPackageToMap(methodDef.Definition.requestTypePath, rg.packagesMap, 0)
+	if methodDef.Definition.RequestParam != nil {
+		requestAlias = addPackageToMap(methodDef.Definition.RequestParam.Path, rg.packagesMap, 0)
 	}
-	if methodDef.Definition.responseTypePath != "" {
-		responseAlias = addPackageToMap(methodDef.Definition.responseTypePath, rg.packagesMap, 0)
+	if methodDef.Definition.ResponseParam != nil {
+		responseAlias = addPackageToMap(methodDef.Definition.ResponseParam.Path, rg.packagesMap, 0)
 	}
 	ctn := &MethodContent{
 		Method:     methodDef.Handler,
@@ -159,7 +159,7 @@ func (rg *routeGroup) getRequestProto(methodDef *RouteDef, alias string) string 
 		params = append(params, fmt.Sprintf("%s string", methodDef.Param))
 	}
 	if methodDef.Definition.Request != nil {
-		params = append(params, fmt.Sprintf("%s *%s.%s", methodDef.Definition.requestName, alias, methodDef.Definition.requestType))
+		params = append(params, fmt.Sprintf("%s *%s.%s", methodDef.Definition.RequestParam.Name, alias, methodDef.Definition.RequestParam.Type))
 	}
 	return strings.Join(params, ", ")
 }
@@ -167,9 +167,9 @@ func (rg *routeGroup) getRequestProto(methodDef *RouteDef, alias string) string 
 func (rg *routeGroup) getReturnType(methodDef *RouteDef, alias string) string {
 	pre, post := "", ""
 	params := make([]string, 0)
-	if methodDef.Definition.Response != nil {
+	if methodDef.Definition.ResponseParam != nil {
 		pre, post = "(", ")"
-		params = append(params, fmt.Sprintf("*%s.%s", alias, methodDef.Definition.responseType))
+		params = append(params, fmt.Sprintf("*%s.%s", alias, methodDef.Definition.ResponseParam.Type))
 	}
 	params = append(params, "error")
 	return fmt.Sprintf("%s%s%s", pre, strings.Join(params, ", "), post)
@@ -202,22 +202,22 @@ func (rg *routeGroup) getServerFunction(methodDef *RouteDef, url string) *Handle
 
 func (rg *routeGroup) parseObjectType(def *R, request bool) *RequestContent {
 	if request {
-		if def.Request == nil {
+		if def.RequestParam == nil {
 			return nil
 		}
 		return &RequestContent{
-			Name:  def.requestName,
-			Type:  def.requestType,
-			Alias: addPackageToMap(def.requestTypePath, rg.packagesMap, 0),
+			Name:  def.RequestParam.Name,
+			Type:  def.RequestParam.Type,
+			Alias: addPackageToMap(def.RequestParam.Path, rg.packagesMap, 0),
 		}
 	} else {
-		if def.Response == nil {
+		if def.ResponseParam == nil {
 			return nil
 		}
 		return &RequestContent{
-			Name:  def.responseName,
-			Type:  def.responseType,
-			Alias: addPackageToMap(def.responseTypePath, rg.packagesMap, 0),
+			Name:  def.ResponseParam.Name,
+			Type:  def.ResponseParam.Type,
+			Alias: addPackageToMap(def.ResponseParam.Path, rg.packagesMap, 0),
 		}
 	}
 }
@@ -228,15 +228,15 @@ func (rg *routeGroup) getRequestParams(methodDef *RouteDef) string {
 		params = append(params, methodDef.Param)
 	}
 	if methodDef.Definition.Request != nil {
-		params = append(params, methodDef.Definition.requestName)
+		params = append(params, methodDef.Definition.RequestParam.Name)
 	}
 	return strings.Join(params, ", ")
 }
 
 func (rg *routeGroup) getResponseParams(def *R) string {
 	params := make([]string, 0)
-	if def.Response != nil {
-		params = append(params, def.responseName)
+	if def.ResponseParam != nil {
+		params = append(params, def.ResponseParam.Name)
 	}
 	params = append(params, "err")
 	return strings.Join(params, ", ")

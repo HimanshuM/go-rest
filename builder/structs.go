@@ -5,18 +5,19 @@ import (
 	"strings"
 )
 
+type Parameter struct {
+	Type    string
+	Name    string
+	Package string
+	Path    string
+}
+
 type R struct {
-	Query            interface{}
-	Request          interface{}
-	Response         interface{}
-	requestType      string
-	requestName      string
-	requestTypeName  string
-	requestTypePath  string
-	responseType     string
-	responseName     string
-	responseTypeName string
-	responseTypePath string
+	Query         interface{}
+	Request       interface{}
+	Response      interface{}
+	RequestParam  *Parameter
+	ResponseParam *Parameter
 }
 
 type RouteDef struct {
@@ -54,10 +55,14 @@ func (r *R) processRequest() {
 	if request.Kind() == reflect.Pointer {
 		request = request.Elem()
 	}
-	r.requestType = request.Name()
-	r.requestName = strings.ToLower(r.requestType[0:1]) + r.requestType[1:]
-	r.requestTypePath = request.PkgPath()
-	r.requestTypeName = getLastComponent(r.requestTypePath)
+	requestType := request.Name()
+	pkgPath := request.PkgPath()
+	r.RequestParam = &Parameter{
+		Type:    requestType,
+		Name:    strings.ToLower(requestType[0:1]) + requestType[1:],
+		Package: getLastComponent(pkgPath),
+		Path:    pkgPath,
+	}
 }
 
 func (r *R) processResponse() {
@@ -65,8 +70,12 @@ func (r *R) processResponse() {
 	if response.Kind() == reflect.Pointer {
 		response = response.Elem()
 	}
-	r.responseType = response.Name()
-	r.responseName = strings.ToLower(r.responseType[0:1]) + r.responseType[1:]
-	r.responseTypePath = response.PkgPath()
-	r.responseTypeName = getLastComponent(r.responseTypePath)
+	responseType := response.Name()
+	pkgPath := response.PkgPath()
+	r.RequestParam = &Parameter{
+		Type:    responseType,
+		Name:    strings.ToLower(responseType[0:1]) + responseType[1:],
+		Package: getLastComponent(pkgPath),
+		Path:    pkgPath,
+	}
 }
