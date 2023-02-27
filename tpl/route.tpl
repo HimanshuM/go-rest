@@ -10,13 +10,13 @@ func {{ .Handler }}(g *gin.Context) {
     }
 {{- end -}}
 {{- if .Response }}
-    var {{ .Response.Name }} *{{ .Response.Alias }}.{{ .Response.Type }}
-{{ end }}
+    var {{ .Response.Name }} {{ .Response.TypeDeclaration }}
+{{- end }}
     if {{ .Returns }} = {{ .LevelServerHandler }}.{{ .Method }}({{ .Params }}); err != nil {
     }
 {{- if .Response }}
-    g.JSON(200, &{{ .Response.Name }})
+    g.JSON({{ .HTTPCode }}, &{{ .Response.Name }})
 {{ else }}
-    g.JSON(200, gin.H{"status": "Ok"})
+    g.JSON({{ .HTTPCode }}, gin.H{"status": "Ok"})
 {{ end -}}
 }

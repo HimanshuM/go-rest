@@ -35,9 +35,10 @@ type MethodContent struct {
 }
 
 type RequestContent struct {
-	Name  string
-	Type  string
-	Alias string
+	Name            string
+	Type            string
+	Alias           string
+	TypeDeclaration string
 }
 
 type HandlerDefContent struct {
@@ -49,6 +50,7 @@ type HandlerDefContent struct {
 	Params             string
 	Returns            string
 	Response           *RequestContent
+	HTTPCode           string
 }
 
 func writeServerFile(path, level, pkg, pkgPath string, leaf *AST) error {
@@ -159,7 +161,7 @@ func (rg *routeGroup) getRequestProto(methodDef *RouteDef, alias string) string 
 		params = append(params, fmt.Sprintf("%s string", methodDef.Param))
 	}
 	if methodDef.Definition.Request != nil {
-		params = append(params, fmt.Sprintf("%s *%s.%s", methodDef.Definition.RequestParam.Name, alias, methodDef.Definition.RequestParam.Type))
+		params = append(params, methodDef.Definition.RequestParam.getObjectDeclaration())
 	}
 	return strings.Join(params, ", ")
 }
@@ -169,7 +171,7 @@ func (rg *routeGroup) getReturnType(methodDef *RouteDef, alias string) string {
 	params := make([]string, 0)
 	if methodDef.Definition.ResponseParam != nil {
 		pre, post = "(", ")"
-		params = append(params, fmt.Sprintf("*%s.%s", alias, methodDef.Definition.ResponseParam.Type))
+		params = append(params, methodDef.Definition.ResponseParam.getTypeDeclaration())
 	}
 	params = append(params, "error")
 	return fmt.Sprintf("%s%s%s", pre, strings.Join(params, ", "), post)
@@ -191,34 +193,36 @@ func (rg *routeGroup) getServerFunction(methodDef *RouteDef, url string) *Handle
 	return &HandlerDefContent{
 		Handler:            methodDef.Handler,
 		Param:              methodDef.Param,
-		Request:            rg.parseObjectType(methodDef.Definition, true),
+		Request:            rg.parseRequestObject(methodDef.Definition),
 		LevelServerHandler: rg.levelServerHandler,
 		Method:             methodDef.Handler,
 		Returns:            rg.getResponseParams(methodDef.Definition),
 		Params:             rg.getRequestParams(methodDef),
-		Response:           rg.parseObjectType(methodDef.Definition, false),
+		Response:           rg.parseResponseObject(methodDef.Definition),
+		HTTPCode:           getHTTPCodeByMethod(methodDef.Method),
 	}
 }
 
-func (rg *routeGroup) parseObjectType(def *R, request bool) *RequestContent {
-	if request {
-		if def.RequestParam == nil {
-			return nil
-		}
-		return &RequestContent{
-			Name:  def.RequestParam.Name,
-			Type:  def.RequestParam.Type,
-			Alias: addPackageToMap(def.RequestParam.Path, rg.packagesMap, 0),
-		}
-	} else {
-		if def.ResponseParam == nil {
-			return nil
-		}
-		return &RequestContent{
-			Name:  def.ResponseParam.Name,
-			Type:  def.ResponseParam.Type,
-			Alias: addPackageToMap(def.ResponseParam.Path, rg.packagesMap, 0),
-		}
+func (rg *routeGroup) parseRequestObject(def *R) *RequestContent {
+	if def.RequestParam == nil {
+		return nil
+	}
+	return &RequestContent{
+		Name:  def.RequestParam.Name,
+		Type:  def.RequestParam.Type,
+		Alias: addPackageToMap(def.RequestParam.Path, rg.packagesMap, 0),
+	}
+}
+
+func (rg *routeGroup) parseResponseObject(def *R) *RequestContent {
+	if def.ResponseParam == nil {
+		return nil
+	}
+	return &RequestContent{
+		Name:            def.ResponseParam.Name,
+		Type:            def.ResponseParam.Type,
+		Alias:           addPackageToMap(def.ResponseParam.Path, rg.packagesMap, 0),
+		TypeDeclaration: def.ResponseParam.getTypeDeclaration(),
 	}
 }
 
@@ -240,4 +244,14 @@ func (rg *routeGroup) getResponseParams(def *R) string {
 	}
 	params = append(params, "err")
 	return strings.Join(params, ", ")
+}
+
+func getHTTPCodeByMethod(method string) string {
+	switch method {
+	case "DELETE":
+		return "204"
+	case "POST":
+		return "201"
+	}
+	return "200"
 }

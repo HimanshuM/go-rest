@@ -3,7 +3,6 @@ package builder
 import (
 	"errors"
 	"os"
-	"strings"
 )
 
 func buildLevel(leaf *AST, pkg, dir, pkgPath string) (err error) {
@@ -41,8 +40,7 @@ func buildLevel(leaf *AST, pkg, dir, pkgPath string) (err error) {
 	return
 }
 
-func BuildPaths() error {
-	pkgComponents := strings.Split(pkgPath, "/")
-	rootPackage := pkgComponents[len(pkgComponents)-1]
+func Generate() error {
+	rootPackage := getLastComponent(pkgPath)
 	return buildLevel(root, rootPackage, rootPackage, pkgPath)
 }
