@@ -53,17 +53,18 @@ type HandlerDefContent struct {
 	HTTPCode           string
 }
 
-func writeServerFile(path, level, pkg, pkgPath string, leaf *AST) error {
+func writeServerFile(level string, leaf *AST, path *routesPathSpec) error {
 	rg := &routeGroup{
 		packagesMap: map[string]importDef{},
 		level:       level,
-		pkg:         pkg,
-		packagePath: pkgPath,
+		pkg:         path.PackageName,
+		packagePath: path.PackagePath,
 		leaf:        leaf,
 	}
+	addPackageToMap("net/http", rg.packagesMap, 0)
 	addPackageToMap("github.com/gin-gonic/gin", rg.packagesMap, 0)
-	path += level + "_server.go"
-	hnd, err := os.Create(path)
+	filepath := path.PackageName + level + "_server.go"
+	hnd, err := os.Create(filepath)
 	if err != nil {
 		return err
 	}
@@ -143,6 +144,8 @@ func (rg *routeGroup) getServerMethod(methodDef *RouteDef, url string) *MethodCo
 	requestAlias, responseAlias := "", ""
 	if methodDef.Definition.RequestParam != nil {
 		requestAlias = addPackageToMap(methodDef.Definition.RequestParam.Path, rg.packagesMap, 0)
+		addPackageToMap("fmt", rg.packagesMap, 0)
+		addPackageToMap("gopkg.in/go-playground/validator.v9", rg.packagesMap, 0)
 	}
 	if methodDef.Definition.ResponseParam != nil {
 		responseAlias = addPackageToMap(methodDef.Definition.ResponseParam.Path, rg.packagesMap, 0)

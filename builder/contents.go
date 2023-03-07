@@ -24,18 +24,25 @@ type RoutesContent struct {
 	Level   string
 }
 
-func writeRoutesFile(path, level, pkg, pkgPath string, leaf *AST) error {
+// writeRoutesFile writes each routes file
+/*
+ * path: 	The file path
+ * level: 	The route level that this set of routes will handle
+ * pkg: 	Package name for this file
+ * pkgPath: Complete package path
+ */
+func writeRoutesFile(level string, leaf *AST, path *routesPathSpec) error {
 	sg := serverGroup{
 		packagesMap: map[string]importDef{},
-		path:        path,
+		path:        path.FilePath,
 		level:       level,
-		pkg:         pkg,
-		packagePath: pkgPath,
+		pkg:         path.PackageName,
+		packagePath: path.PackagePath,
 		leaf:        leaf,
 	}
 	addPackageToMap("github.com/gin-gonic/gin", sg.packagesMap, 0)
-	path += level + ".go"
-	hnd, err := os.Create(path)
+	filepath := path.FilePath + ".go"
+	hnd, err := os.Create(filepath)
 	if err != nil {
 		return err
 	}

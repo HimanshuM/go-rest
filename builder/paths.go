@@ -5,35 +5,55 @@ import (
 	"os"
 )
 
-func buildLevel(leaf *AST, pkg, dir, pkgPath string) (err error) {
-	level := cleanupRoute(leaf.Level)
-	if level != "" {
-		if err = writeRoutesFile(dir, level, pkg, pkgPath, leaf); err != nil {
-			return
-		}
-	}
-	if leaf.HasDefinition {
-		if err = writeServerFile(dir, level, pkg, pkgPath, leaf); err != nil {
-			return
-		}
-	}
-	dir += level
+type routesPathSpec struct {
+	// Path to the routes files
+	FilePath string
+	// Package name for routes
+	PackageName string
+	// Complete routes package
+	PackagePath string
+	// Relative directory path
+	DirPath string
+}
+
+type handlersPathSpec struct {
+	// Path to the handlers files
+	FilePath string
+	// Package name for handlers
+	PackageName string
+	// Complete handlers package
+	PackagePath string
+}
+
+func buildLevel(leaf *AST, path *routesPathSpec) (err error) {
 	if len(leaf.Tree) > 0 {
-		err = os.Mkdir(dir, 0755)
+		err = os.Mkdir(path.DirPath, 0755)
 		if err != nil {
 			if !errors.Is(err, os.ErrExist) {
 				return
 			}
 		}
 	}
+	level := cleanupRoute(leaf.Level)
 	if level != "" {
-		pkgPath += "/" + level
+		if err = writeRoutesFile(level, leaf, path); err != nil {
+			return
+		}
 	}
-	if level == "" {
-		level = pkg
+	if leaf.HasDefinition {
+		if err = writeServerFile(level, leaf, path); err != nil {
+			return
+		}
 	}
 	for _, node := range leaf.Tree {
-		if err = buildLevel(node, level, dir+"/", pkgPath); err != nil {
+		dirPath := path.DirPath + level
+		newPath := &routesPathSpec{
+			FilePath:    dirPath,
+			PackageName: level,
+			PackagePath: path.PackagePath + level,
+			DirPath:     dirPath + "/",
+		}
+		if err = buildLevel(node, newPath); err != nil {
 			return
 		}
 	}
@@ -41,6 +61,12 @@ func buildLevel(leaf *AST, pkg, dir, pkgPath string) (err error) {
 }
 
 func Generate() error {
-	rootPackage := getLastComponent(pkgPath)
-	return buildLevel(root, rootPackage, rootPackage, pkgPath)
+	routePackage := getLastComponent(routesPkgPath)
+	// handlerPackage := getLastComponent(handlersPkgPath)
+	return buildLevel(root, &routesPathSpec{
+		FilePath:    routePackage,
+		PackageName: routePackage,
+		PackagePath: routesPkgPath,
+		DirPath:     routePackage + "/",
+	})
 }

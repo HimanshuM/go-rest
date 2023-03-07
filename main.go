@@ -9,7 +9,8 @@ import (
 )
 
 func definitions() {
-	builder.Package("github.com/HimanshuM/go-rest-builder/routes")
+	builder.RoutesPackage("github.com/HimanshuM/go-rest-builder/routes")
+	builder.HandlersPackage("github.com/HimanshuM/go-rest-builder/apis")
 	root, _ := builder.Path("/")
 	apiV1, _ := root.Path("/api/v1")
 	apiV2, _ := root.Path("/api/v2")

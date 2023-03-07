@@ -5,10 +5,14 @@ import (
 	"strings"
 )
 
-var pkgPath string
+var routesPkgPath, handlersPkgPath string
 
-func Package(pkg string) {
-	pkgPath = strings.Trim(pkg, "/")
+func RoutesPackage(pkg string) {
+	routesPkgPath = strings.Trim(pkg, "/")
+}
+
+func HandlersPackage(pkg string) {
+	handlersPkgPath = strings.Trim(pkg, "/")
 }
 
 func Path(route string) (*AST, error) {
