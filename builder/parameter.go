@@ -78,3 +78,12 @@ func (p *Parameter) getTypeDeclaration() string {
 	decl += fmt.Sprintf("%s.%s", p.Package, p.Type)
 	return decl
 }
+
+func (p *Parameter) getUnnamedObjectDeclaration() string {
+	decl := "&"
+	if p.IsArray {
+		decl = "[]*"
+	}
+	decl += fmt.Sprintf("%s.%s", p.Package, p.Type)
+	return decl
+}

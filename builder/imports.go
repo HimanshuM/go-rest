@@ -2,6 +2,7 @@ package builder
 
 import (
 	"bytes"
+	"sort"
 	"strconv"
 	"text/template"
 )
@@ -19,7 +20,7 @@ func imports(pkgs ...importDef) (string, error) {
 	if len(pkgs) == 1 {
 		return writeImportContent(pkgs[0])
 	}
-	return writeImportsContent(pkgs)
+	return writeImportsContent(sortImports(pkgs))
 }
 
 func writeImportContent(pkg importDef) (string, error) {
@@ -60,4 +61,11 @@ func addPackageToMap(pkg string, packages map[string]importDef, suffix int) stri
 		packages[pkgName] = importDef{Path: pkg, Alias: pkgName, Name: origName}
 	}
 	return pkgName
+}
+
+func sortImports(pkgs []importDef) []importDef {
+	sort.Slice(pkgs, func(i, j int) bool {
+		return pkgs[i].Path < pkgs[j].Path
+	})
+	return pkgs
 }

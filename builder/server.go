@@ -53,17 +53,17 @@ type HandlerDefContent struct {
 	HTTPCode           string
 }
 
-func writeServerFile(level string, leaf *AST, path *routesPathSpec) error {
+func writeServerFile(level string, leaf *AST, path *PathSpec) error {
 	rg := &routeGroup{
 		packagesMap: map[string]importDef{},
 		level:       level,
-		pkg:         path.PackageName,
-		packagePath: path.PackagePath,
+		pkg:         path.RoutePackageName,
+		packagePath: path.RoutePackagePath,
 		leaf:        leaf,
 	}
 	addPackageToMap("net/http", rg.packagesMap, 0)
 	addPackageToMap("github.com/gin-gonic/gin", rg.packagesMap, 0)
-	filepath := path.PackageName + level + "_server.go"
+	filepath := path.RouteFilePath + "_server.go"
 	hnd, err := os.Create(filepath)
 	if err != nil {
 		return err

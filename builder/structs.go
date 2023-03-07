@@ -1,5 +1,7 @@
 package builder
 
+import "github.com/gin-gonic/gin"
+
 type Parameter struct {
 	Type    string
 	Name    string
@@ -39,4 +41,5 @@ type AST struct {
 	Tree          map[string]*AST
 	HasDefinition bool
 	Package       string
+	Middlewares   gin.HandlersChain
 }

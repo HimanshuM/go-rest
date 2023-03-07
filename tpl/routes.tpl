@@ -9,8 +9,8 @@ type {{ .LevelServer }} interface {
 
 var {{ .LevelServerHandler }} {{ .LevelServer }}
 
-func Use{{ .LevelServer }}Handler(handler *{{ .LevelServer }}) {
-    {{ .LevelServerHandler }} = *handler
+func Use{{ .LevelServer }}Handler(handler {{ .LevelServer }}) {
+    {{ .LevelServerHandler }} = handler
 }
 {{ range $fn := .Functions }}
 {{ $fn }}

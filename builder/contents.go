@@ -31,19 +31,19 @@ type RoutesContent struct {
  * pkg: 	Package name for this file
  * pkgPath: Complete package path
  */
-func writeRoutesFile(level string, leaf *AST, path *routesPathSpec) error {
+func writeRoutesFile(level string, leaf *AST, path *PathSpec) error {
 	sg := serverGroup{
 		packagesMap: map[string]importDef{},
-		path:        path.FilePath,
+		path:        path.RouteFilePath,
 		level:       level,
-		pkg:         path.PackageName,
-		packagePath: path.PackagePath,
+		pkg:         path.RoutePackageName,
+		packagePath: path.RoutePackagePath,
 		leaf:        leaf,
 	}
 	addPackageToMap("github.com/gin-gonic/gin", sg.packagesMap, 0)
-	filepath := path.FilePath + ".go"
-	hnd, err := os.Create(filepath)
+	hnd, err := os.Create(path.RouteFilePath + ".go")
 	if err != nil {
+		fmt.Printf("error creating file: %v\n", err)
 		return err
 	}
 	defer hnd.Close()

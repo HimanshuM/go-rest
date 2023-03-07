@@ -2,58 +2,88 @@ package builder
 
 import (
 	"errors"
+	"fmt"
 	"os"
 )
 
-type routesPathSpec struct {
+type PathSpec struct {
 	// Path to the routes files
-	FilePath string
+	RouteFilePath string
 	// Package name for routes
-	PackageName string
+	RoutePackageName string
 	// Complete routes package
-	PackagePath string
+	RoutePackagePath string
 	// Relative directory path
-	DirPath string
-}
-
-type handlersPathSpec struct {
+	RouteDirPath string
 	// Path to the handlers files
-	FilePath string
+	HandlerFilePath string
 	// Package name for handlers
-	PackageName string
+	HandlerPackageName string
 	// Complete handlers package
-	PackagePath string
+	HandlerPackagePath string
+	// Relative directory path
+	HandlerDirPath string
 }
 
-func buildLevel(leaf *AST, path *routesPathSpec) (err error) {
-	if len(leaf.Tree) > 0 {
-		err = os.Mkdir(path.DirPath, 0755)
-		if err != nil {
-			if !errors.Is(err, os.ErrExist) {
-				return
-			}
-		}
-	}
-	level := cleanupRoute(leaf.Level)
+func getPackageInfo(level, name, path string) (string, string) {
 	if level != "" {
-		if err = writeRoutesFile(level, leaf, path); err != nil {
+		path += "/" + level
+		name = level
+	}
+	return name, path
+}
+
+func mkDir(path string) error {
+	err := os.Mkdir(path, 0755)
+	if err != nil {
+		if !errors.Is(err, os.ErrExist) {
+			return err
+		}
+	}
+	return nil
+}
+
+func buildRoutes(node *AST, path *PathSpec) (err error) {
+	if len(node.Tree) > 0 {
+		if err = mkDir(path.RouteDirPath); err != nil {
+			return
+		}
+		if err = mkDir(path.HandlerDirPath); err != nil {
 			return
 		}
 	}
-	if leaf.HasDefinition {
-		if err = writeServerFile(level, leaf, path); err != nil {
+	level := cleanupRoute(node.Level)
+	if level != "" {
+		if err = writeRoutesFile(level, node, path); err != nil {
 			return
 		}
 	}
-	for _, node := range leaf.Tree {
-		dirPath := path.DirPath + level
-		newPath := &routesPathSpec{
-			FilePath:    dirPath,
-			PackageName: level,
-			PackagePath: path.PackagePath + level,
-			DirPath:     dirPath + "/",
+	if node.HasDefinition {
+		if err = writeServerFile(level, node, path); err != nil {
+			return
 		}
-		if err = buildLevel(node, newPath); err != nil {
+		if err = writeHandlerFile(level, node, path); err != nil {
+			return
+		}
+	}
+	routePkg, routePkgPath := getPackageInfo(level, path.RoutePackageName, path.RoutePackagePath)
+	handlerPkg, handlerPkgPath := getPackageInfo(level, path.HandlerPackageName, path.HandlerPackagePath)
+
+	for _, child := range node.Tree {
+		childLevel := cleanupRoute(child.Level)
+		routeDirPath := fmt.Sprintf("%s/%s", path.RouteFilePath, childLevel)
+		handlerDirPath := fmt.Sprintf("%s/%s", path.HandlerFilePath, childLevel)
+		newPath := &PathSpec{
+			RouteFilePath:      routeDirPath,
+			RoutePackageName:   routePkg,
+			RoutePackagePath:   routePkgPath,
+			RouteDirPath:       routeDirPath + "/",
+			HandlerFilePath:    handlerDirPath,
+			HandlerPackageName: handlerPkg,
+			HandlerPackagePath: handlerPkgPath,
+			HandlerDirPath:     handlerDirPath + "/",
+		}
+		if err = buildRoutes(child, newPath); err != nil {
 			return
 		}
 	}
@@ -62,11 +92,15 @@ func buildLevel(leaf *AST, path *routesPathSpec) (err error) {
 
 func Generate() error {
 	routePackage := getLastComponent(routesPkgPath)
-	// handlerPackage := getLastComponent(handlersPkgPath)
-	return buildLevel(root, &routesPathSpec{
-		FilePath:    routePackage,
-		PackageName: routePackage,
-		PackagePath: routesPkgPath,
-		DirPath:     routePackage + "/",
+	handlerPackage := getLastComponent(handlersPkgPath)
+	return buildRoutes(root, &PathSpec{
+		RouteFilePath:      routePackage,
+		RoutePackageName:   routePackage,
+		RoutePackagePath:   routesPkgPath,
+		RouteDirPath:       routePackage + "/",
+		HandlerFilePath:    handlerPackage,
+		HandlerPackageName: handlerPackage,
+		HandlerPackagePath: handlersPkgPath,
+		HandlerDirPath:     handlerPackage + "/",
 	})
 }
