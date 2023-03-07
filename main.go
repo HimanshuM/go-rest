@@ -21,7 +21,7 @@ func definitions() {
 	stds, _ := apiV1.Path("/standards")
 	stds.GET(&builder.R{Response: []*models.StandardResponse{}}).POST(&builder.R{Request: []*models.StandardRequest{}, Response: []*models.StandardResponse{}})
 	stdID, _ := stds.Path("/{id}")
-	stdID.GET(&builder.R{}).PATCH(&builder.R{}).DELETE(&builder.R{})
+	stdID.GET(&builder.R{Response: &models.StandardResponse{}}).PATCH(&builder.R{Response: &models.StandardResponse{}}).DELETE(&builder.R{})
 	sections, _ := apiV1.Path("/sections")
 	sections.GET(&builder.R{}).POST(&builder.R{})
 	secID, _ := sections.Path("/{id}")
@@ -62,7 +62,7 @@ func printLeaf(leaf *builder.AST, indent int) {
 func main() {
 	definitions()
 	if err := builder.Generate(); err != nil {
-		fmt.Printf("ERROR: %s", err.Error())
+		fmt.Printf("ERROR: %s\n", err.Error())
 		return
 	}
 }
