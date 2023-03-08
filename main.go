@@ -12,7 +12,7 @@ func definitions() {
 	builder.RoutesPackage("github.com/HimanshuM/go-rest-builder/routes")
 	builder.HandlersPackage("github.com/HimanshuM/go-rest-builder/apis")
 	root, _ := builder.Path("/")
-	apiV1, _ := root.Path("/api/v1")
+	apiV1, _ := root.Path("/api/v1", models.Authenticate)
 	apiV2, _ := root.Path("/api/v2")
 	schools, _ := apiV1.Path("/schools")
 	schools.GET(&builder.R{}).POST(&builder.R{})

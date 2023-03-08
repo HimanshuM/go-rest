@@ -3,6 +3,8 @@ package builder
 import (
 	"fmt"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 var routesPkgPath, handlersPkgPath string
@@ -15,12 +17,22 @@ func HandlersPackage(pkg string) {
 	handlersPkgPath = strings.Trim(pkg, "/")
 }
 
-func Path(route string) (*AST, error) {
-	return getPath(route, root)
+func Path(route string, middlewares ...gin.HandlerFunc) (*AST, error) {
+	leaf, err := getPath(route, root)
+	if err != nil {
+		return nil, err
+	}
+	leaf.Middlewares = append(leaf.Middlewares, middlewares...)
+	return leaf, nil
 }
 
-func (a *AST) Path(route string) (*AST, error) {
-	return getPath(route, a)
+func (a *AST) Path(route string, middlewares ...gin.HandlerFunc) (*AST, error) {
+	leaf, err := getPath(route, a)
+	if err != nil {
+		return nil, err
+	}
+	leaf.Middlewares = append(leaf.Middlewares, middlewares...)
+	return leaf, nil
 }
 
 func (a *AST) append(route string) string {

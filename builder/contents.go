@@ -3,6 +3,9 @@ package builder
 import (
 	"fmt"
 	"os"
+	"reflect"
+	"runtime"
+	"strings"
 	"text/template"
 )
 
@@ -16,13 +19,14 @@ type serverGroup struct {
 }
 
 type RoutesContent struct {
-	Package   string
-	Imports   string
-	Server    string
-	Route     string
-	Lines     []string
-	Level     string
-	SetupCase string
+	Package     string
+	Imports     string
+	Server      string
+	Route       string
+	Lines       []string
+	Level       string
+	SetupCase   string
+	Middlewares []string
 }
 
 // writeRoutesFile writes each routes file
@@ -71,6 +75,7 @@ func (sg *serverGroup) buildRoutesContent() (*RoutesContent, error) {
 	if len(sg.leaf.Tree) > 0 && sg.level != "" {
 		addPackageToMap(fmt.Sprintf("%s/%s", sg.packagePath, sg.level), sg.packagesMap, 0)
 	}
+	middlewares := sg.buildMiddlewares()
 	importStrings := []importDef{}
 	for _, pkg := range sg.packagesMap {
 		importStrings = append(importStrings, pkg)
@@ -79,24 +84,40 @@ func (sg *serverGroup) buildRoutesContent() (*RoutesContent, error) {
 	if err != nil {
 		return nil, err
 	}
-	server := ""
-	if len(sg.leaf.Tree) > 0 {
-		server = sg.level + "Router"
-	}
+
+	prefix := sg.level
 	setupCase := "S"
 	if sg.level == "" {
+		prefix = "root"
 		setupCase = "s"
 	}
+	server := ""
+	if len(sg.leaf.Tree) > 0 {
+		server = prefix + "Router"
+	}
 	ctn := &RoutesContent{
-		Package:   sg.pkg,
-		Imports:   imports,
-		Server:    server,
-		Route:     sg.leaf.Level,
-		Level:     Title(sg.level),
-		SetupCase: setupCase,
+		Package:     sg.pkg,
+		Imports:     imports,
+		Server:      server,
+		Route:       sg.leaf.Level,
+		Level:       Title(sg.level),
+		SetupCase:   setupCase,
+		Middlewares: middlewares,
 	}
 	ctn.linesFromRoute(sg.leaf, sg.level, ctn.Server)
 	return ctn, nil
+}
+
+func (sg *serverGroup) buildMiddlewares() []string {
+	middlewares := make([]string, len(sg.leaf.Middlewares))
+	for i, middleware := range sg.leaf.Middlewares {
+		mw := runtime.FuncForPC(reflect.ValueOf(middleware).Pointer()).Name()
+		mwName := getLastComponentBySeparator(mw, ".")
+		mwPkgPath := strings.Replace(mw, "."+mwName, "", 1)
+		alias := addPackageToMap(mwPkgPath, sg.packagesMap, 0)
+		middlewares[i] = fmt.Sprintf("%s.%s", alias, mwName)
+	}
+	return middlewares
 }
 
 func (ctn *RoutesContent) linesFromRoute(leaf *AST, level, server string) {

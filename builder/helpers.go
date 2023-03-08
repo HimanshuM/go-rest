@@ -27,6 +27,10 @@ func Title(str string) string {
 }
 
 func getLastComponent(str string) string {
-	components := strings.Split(str, "/")
+	return getLastComponentBySeparator(str, "/")
+}
+
+func getLastComponentBySeparator(str string, sep string) string {
+	components := strings.Split(str, sep)
 	return components[len(components)-1]
 }
