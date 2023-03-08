@@ -20,12 +20,15 @@ type handlerGroup struct {
 }
 
 type HandlersContent struct {
-	Package       string
-	Imports       string
-	LevelServer   string
-	Methods       []string
-	Level         string
-	RoutesPackage string
+	Package        string
+	Imports        string
+	LevelServer    string
+	HasLevelServer bool
+	Methods        []string
+	Level          string
+	RoutesPackage  string
+	InitName       string
+	SubPaths       []string
 }
 
 type HandlerContent struct {
@@ -47,9 +50,14 @@ func writeHandlerFile(level string, leaf *AST, path *PathSpec) error {
 		routePkgPath: path.RoutePackagePath,
 		routePkgName: path.RoutePackageName,
 	}
-	addPackageToMap("github.com/gin-gonic/gin", hg.packagesMap, 0)
-	addPackageToMap(hg.routePkgPath, hg.packagesMap, 0)
+	if leaf.HasDefinition {
+		addPackageToMap("github.com/gin-gonic/gin", hg.packagesMap, 0)
+		addPackageToMap(hg.routePkgPath, hg.packagesMap, 0)
+	}
 	filepath := path.HandlerFilePath + ".go"
+	if level == "" {
+		filepath = fmt.Sprintf("%s/%s", path.HandlerFilePath, filepath)
+	}
 	hnd, err := os.Create(filepath)
 	if err != nil {
 		return err
@@ -77,6 +85,7 @@ func (hg *handlerGroup) buildHandlersContent() (*HandlersContent, error) {
 	if err != nil {
 		return nil, err
 	}
+	initName, subPaths := hg.buildInitInvokes()
 	for _, pkg := range hg.packagesMap {
 		importsArr = append(importsArr, pkg)
 	}
@@ -85,11 +94,15 @@ func (hg *handlerGroup) buildHandlersContent() (*HandlersContent, error) {
 		return nil, err
 	}
 	cnt := &HandlersContent{
-		Package:       hg.pkg,
-		Imports:       imports,
-		LevelServer:   hg.levelServer,
-		Methods:       methods,
-		RoutesPackage: hg.routePkgName,
+		Package:        hg.pkg,
+		Imports:        imports,
+		LevelServer:    hg.levelServer,
+		HasLevelServer: hg.leaf.HasDefinition,
+		Methods:        methods,
+		RoutesPackage:  hg.routePkgName,
+		Level:          Title(hg.level),
+		InitName:       initName,
+		SubPaths:       subPaths,
 	}
 	return cnt, nil
 }
@@ -170,4 +183,23 @@ func (hg *handlerGroup) parseResponseObject(def *R) *RequestContent {
 		Alias:           addPackageToMap(def.ResponseParam.Path, hg.packagesMap, 0),
 		TypeDeclaration: def.ResponseParam.getUnnamedObjectDeclaration(),
 	}
+}
+
+func (hg *handlerGroup) buildInitInvokes() (string, []string) {
+	initName := "Init"
+	invokes := make([]string, len(hg.leaf.Tree))
+	i := 0
+	for _, child := range hg.leaf.Tree {
+		pkgPath := hg.packagePath + "/" + hg.level
+		pkgName := getLastComponent(pkgPath)
+		if pkgName != "" {
+			pkgName += "."
+			addPackageToMap(pkgPath, hg.packagesMap, 0)
+		} else {
+			initName = "init"
+		}
+		invokes[i] = fmt.Sprintf("%sInit%s", pkgName, Title(cleanupRoute(child.Level)))
+		i++
+	}
+	return initName, invokes
 }

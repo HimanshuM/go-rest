@@ -53,16 +53,14 @@ func buildRoutes(node *AST, path *PathSpec) (err error) {
 		}
 	}
 	level := cleanupRoute(node.Level)
-	if level != "" {
-		if err = writeRoutesFile(level, node, path); err != nil {
-			return
-		}
+	if err = writeRoutesFile(level, node, path); err != nil {
+		return
+	}
+	if err = writeHandlerFile(level, node, path); err != nil {
+		return
 	}
 	if node.HasDefinition {
 		if err = writeServerFile(level, node, path); err != nil {
-			return
-		}
-		if err = writeHandlerFile(level, node, path); err != nil {
 			return
 		}
 	}

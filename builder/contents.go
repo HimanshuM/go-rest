@@ -16,12 +16,13 @@ type serverGroup struct {
 }
 
 type RoutesContent struct {
-	Package string
-	Imports string
-	Server  string
-	Route   string
-	Lines   []string
-	Level   string
+	Package   string
+	Imports   string
+	Server    string
+	Route     string
+	Lines     []string
+	Level     string
+	SetupCase string
 }
 
 // writeRoutesFile writes each routes file
@@ -41,7 +42,11 @@ func writeRoutesFile(level string, leaf *AST, path *PathSpec) error {
 		leaf:        leaf,
 	}
 	addPackageToMap("github.com/gin-gonic/gin", sg.packagesMap, 0)
-	hnd, err := os.Create(path.RouteFilePath + ".go")
+	filepath := path.RouteFilePath + ".go"
+	if level == "" {
+		filepath = fmt.Sprintf("%s/%s", path.RouteFilePath, filepath)
+	}
+	hnd, err := os.Create(filepath)
 	if err != nil {
 		fmt.Printf("error creating file: %v\n", err)
 		return err
@@ -63,7 +68,7 @@ func (sg *serverGroup) writeRoutesContent(hnd *os.File) error {
 }
 
 func (sg *serverGroup) buildRoutesContent() (*RoutesContent, error) {
-	if len(sg.leaf.Tree) > 0 {
+	if len(sg.leaf.Tree) > 0 && sg.level != "" {
 		addPackageToMap(fmt.Sprintf("%s/%s", sg.packagePath, sg.level), sg.packagesMap, 0)
 	}
 	importStrings := []importDef{}
@@ -78,12 +83,17 @@ func (sg *serverGroup) buildRoutesContent() (*RoutesContent, error) {
 	if len(sg.leaf.Tree) > 0 {
 		server = sg.level + "Router"
 	}
+	setupCase := "S"
+	if sg.level == "" {
+		setupCase = "s"
+	}
 	ctn := &RoutesContent{
-		Package: sg.pkg,
-		Imports: imports,
-		Server:  server,
-		Route:   sg.leaf.Level,
-		Level:   Title(sg.level),
+		Package:   sg.pkg,
+		Imports:   imports,
+		Server:    server,
+		Route:     sg.leaf.Level,
+		Level:     Title(sg.level),
+		SetupCase: setupCase,
 	}
 	ctn.linesFromRoute(sg.leaf, sg.level, ctn.Server)
 	return ctn, nil
@@ -92,8 +102,11 @@ func (sg *serverGroup) buildRoutesContent() (*RoutesContent, error) {
 func (ctn *RoutesContent) linesFromRoute(leaf *AST, level, server string) {
 	i := 0
 	ctn.Lines = make([]string, len(leaf.Tree)+len(leaf.Node.Methods))
+	if level != "" {
+		level += "."
+	}
 	for _, node := range leaf.Tree {
-		ctn.Lines[i] = fmt.Sprintf("%s.Setup%sRoutes(%s)", level, Title(cleanupRoute(node.Level)), server)
+		ctn.Lines[i] = fmt.Sprintf("%sSetup%sRoutes(%s)", level, Title(cleanupRoute(node.Level)), server)
 		i++
 	}
 	for method, def := range leaf.Node.Methods {
