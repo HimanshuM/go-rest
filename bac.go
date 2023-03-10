@@ -1,36 +1,35 @@
-package main
+package builder
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/HimanshuM/go-rest-builder/builder"
-	"github.com/HimanshuM/go-rest-builder/models"
+	models "github.com/HimanshuM/go-rest-builder/v1/model"
 )
 
 func definitions() {
-	builder.RoutesPackage("github.com/HimanshuM/go-rest-builder/routes")
-	builder.HandlersPackage("github.com/HimanshuM/go-rest-builder/apis")
-	root, _ := builder.Path("/")
+	RoutesPackage("github.com/HimanshuM/go-rest-builder/v1/routes")
+	HandlersPackage("github.com/HimanshuM/go-rest-builder/v1/apis")
+	root, _ := Path("/")
 	apiV1, _ := root.Path("/api/v1", models.Authenticate)
 	apiV2, _ := root.Path("/api/v2")
 	schools, _ := apiV1.Path("/schools")
-	schools.GET(&builder.R{}).POST(&builder.R{})
+	schools.GET(&R{}).POST(&R{})
 	schoolID, _ := schools.Path("/{id}")
-	schoolID.GET(&builder.R{}).PATCH(&builder.R{}).DELETE(&builder.R{})
+	schoolID.GET(&R{}).PATCH(&R{}).DELETE(&R{})
 	stds, _ := apiV1.Path("/standards")
-	stds.GET(&builder.R{Response: []*models.StandardResponse{}}).POST(&builder.R{Request: []*models.StandardRequest{}, Response: []*models.StandardResponse{}})
+	stds.GET(&R{Response: []*models.StandardResponse{}}).POST(&R{Request: []*models.StandardRequest{}, Response: []*models.StandardResponse{}})
 	stdID, _ := stds.Path("/{id}")
-	stdID.GET(&builder.R{Response: &models.StandardResponse{}}).PATCH(&builder.R{Response: &models.StandardResponse{}}).DELETE(&builder.R{})
+	stdID.GET(&R{Response: &models.StandardResponse{}}).PATCH(&R{Response: &models.StandardResponse{}}).DELETE(&R{})
 	sections, _ := apiV1.Path("/sections")
-	sections.GET(&builder.R{}).POST(&builder.R{})
+	sections.GET(&R{}).POST(&R{})
 	secID, _ := sections.Path("/{id}")
-	secID.GET(&builder.R{}).PATCH(&builder.R{}).DELETE(&builder.R{})
+	secID.GET(&R{}).PATCH(&R{}).DELETE(&R{})
 	v2Admin, _ := apiV2.Path("/admin")
-	v2Admin.GET(&builder.R{})
+	v2Admin.GET(&R{})
 }
 
-func stringifyHandlers(node *builder.Route) string {
+func stringifyHandlers(node *Route) string {
 	handlers := make([]string, len(node.Methods))
 	if len(node.Methods) == 0 {
 		return ""
@@ -43,7 +42,7 @@ func stringifyHandlers(node *builder.Route) string {
 	return ", Handlers: " + strings.Join(handlers, "\t")
 }
 
-func printLeaf(leaf *builder.AST, indent int) {
+func printLeaf(leaf *AST, indent int) {
 	spaces := strings.Repeat(" ", indent)
 	fmt.Printf("%sLEAF: %s (%t)", spaces, leaf.Level, leaf.HasDefinition)
 	if leaf.Node != nil {
@@ -61,7 +60,7 @@ func printLeaf(leaf *builder.AST, indent int) {
 
 func main() {
 	definitions()
-	if err := builder.Generate(); err != nil {
+	if err := Generate(); err != nil {
 		fmt.Printf("ERROR: %s\n", err.Error())
 		return
 	}
