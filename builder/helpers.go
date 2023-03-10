@@ -1,4 +1,4 @@
-package gorest
+package builder
 
 import (
 	"strings"

@@ -1,4 +1,4 @@
-module github.com/HimanshuM/gorest
+module github.com/HimanshuM/go-rest
 
 go 1.20
 

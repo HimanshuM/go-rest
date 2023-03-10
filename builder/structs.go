@@ -1,4 +1,4 @@
-package gorest
+package builder
 
 import "github.com/gin-gonic/gin"
 
