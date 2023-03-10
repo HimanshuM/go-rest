@@ -1,4 +1,4 @@
-module github.com/HimanshuM/gorest
+module github.com/HimanshuM/gorest/builder
 
 go 1.20
 
