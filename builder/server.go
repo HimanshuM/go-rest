@@ -193,15 +193,21 @@ func (rg *routeGroup) buildServerFunction(methodDef *RouteDef, url string) (stri
 }
 
 func (rg *routeGroup) getServerFunction(methodDef *RouteDef, url string) *HandlerDefContent {
+	request := rg.parseRequestObject(methodDef.Definition)
+	response := rg.parseResponseObject(methodDef.Definition)
+	if request != nil && response != nil && request.Name == response.Name {
+		request.Name += "Req"
+		response.Name += "Res"
+	}
 	return &HandlerDefContent{
 		Handler:            methodDef.Handler,
 		Param:              methodDef.Param,
-		Request:            rg.parseRequestObject(methodDef.Definition),
+		Request:            request,
 		LevelServerHandler: rg.levelServerHandler,
 		Method:             methodDef.Handler,
-		Returns:            rg.getResponseParams(methodDef.Definition),
-		Params:             rg.getRequestParams(methodDef),
-		Response:           rg.parseResponseObject(methodDef.Definition),
+		Returns:            rg.getResponseParams(methodDef.Definition, response),
+		Params:             rg.getRequestParams(methodDef, request),
+		Response:           response,
 		HTTPCode:           getHTTPCodeByMethod(methodDef.Method),
 	}
 }
@@ -214,7 +220,7 @@ func (rg *routeGroup) parseRequestObject(def *R) *RequestContent {
 		Name:            def.RequestParam.Name,
 		Type:            def.RequestParam.Type,
 		Alias:           addPackageToMap(def.RequestParam.Path, rg.packagesMap, 0),
-		TypeDeclaration: def.RequestParam.getTypeDeclaration(),
+		TypeDeclaration: def.RequestParam.getUnnamedObjectDeclaration(),
 	}
 }
 
@@ -230,21 +236,29 @@ func (rg *routeGroup) parseResponseObject(def *R) *RequestContent {
 	}
 }
 
-func (rg *routeGroup) getRequestParams(methodDef *RouteDef) string {
+func (rg *routeGroup) getRequestParams(methodDef *RouteDef, requestParam *RequestContent) string {
 	params := []string{"g"}
 	if methodDef.Param != "" {
 		params = append(params, methodDef.Param)
 	}
 	if methodDef.Definition.Request != nil {
-		params = append(params, methodDef.Definition.RequestParam.Name)
+		name := methodDef.Definition.RequestParam.Name
+		if requestParam != nil {
+			name = requestParam.Name
+		}
+		params = append(params, name)
 	}
 	return strings.Join(params, ", ")
 }
 
-func (rg *routeGroup) getResponseParams(def *R) string {
+func (rg *routeGroup) getResponseParams(def *R, responseParam *RequestContent) string {
 	params := make([]string, 0)
 	if def.ResponseParam != nil {
-		params = append(params, def.ResponseParam.Name)
+		name := def.ResponseParam.Name
+		if responseParam != nil {
+			name = responseParam.Name
+		}
+		params = append(params, name)
 	}
 	params = append(params, "err")
 	return strings.Join(params, ", ")
